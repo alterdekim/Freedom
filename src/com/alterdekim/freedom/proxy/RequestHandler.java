@@ -72,7 +72,7 @@ public class RequestHandler implements Runnable {
 
         // Get Request from client
         String post_str = "";
-        String requestString;
+        String requestString = "";
         try{
             requestString = proxyToClientBr.readLine();
             String line = "";
@@ -92,31 +92,33 @@ public class RequestHandler implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println("Error reading request from client");
-            return;
         }
         // Parse out URL
+        try {
+            System.out.println("Request Received " + requestString);
+            // Get the Request type
+            String request = requestString.substring(0, requestString.indexOf(' '));
 
-        System.out.println("Request Received " + requestString);
-        // Get the Request type
-        String request = requestString.substring(0,requestString.indexOf(' '));
+            // remove request type and space
+            String urlString = requestString.substring(requestString.indexOf(' ') + 1);
 
-        // remove request type and space
-        String urlString = requestString.substring(requestString.indexOf(' ')+1);
+            // Remove everything past next space
+            urlString = urlString.substring(0, urlString.indexOf(' '));
 
-        // Remove everything past next space
-        urlString = urlString.substring(0, urlString.indexOf(' '));
+            // Prepend http:// if necessary to create correct URL
+            if (!urlString.substring(0, 4).equals("http")) {
+                String temp = "http://";
+                urlString = temp + urlString;
+            }
 
-        // Prepend http:// if necessary to create correct URL
-        if(!urlString.substring(0,4).equals("http")){
-            String temp = "http://";
-            urlString = temp + urlString;
-        }
-
-        // Check request type
-        if(request.equals("CONNECT")){
-        } else {
-            System.out.println("HTTP GET/POST for : " + urlString + "\n");
-            sendNonCachedToClient(urlString, post_str);
+            // Check request typepp
+            if (request.equals("CONNECT")) {
+            } else {
+                System.out.println("HTTP GET/POST for : " + urlString + "\n");
+                sendNonCachedToClient(urlString, post_str);
+            }
+        } catch ( Exception e ) {
+            e.printStackTrace();
         }
     }
 
