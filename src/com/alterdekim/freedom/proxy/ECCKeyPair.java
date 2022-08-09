@@ -1,10 +1,10 @@
 package com.alterdekim.freedom.proxy;
 
-public class RSAKeyPair {
+public class ECCKeyPair {
     private String privateKey;
     private String publicKey;
 
-    public RSAKeyPair( String privateKey, String publicKey ) {
+    public ECCKeyPair( String privateKey, String publicKey ) {
         this.privateKey = privateKey;
         this.publicKey = publicKey;
     }

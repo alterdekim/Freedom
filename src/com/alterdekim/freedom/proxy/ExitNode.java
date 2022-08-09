@@ -13,6 +13,8 @@ public class ExitNode extends Thread {
 
     private PrintWriter pw;
 
+    private ExitNodeTunnel en;
+
     public ExitNode( String address, int port ) {
         this.address = address;
         this.port = port;
@@ -25,6 +27,10 @@ public class ExitNode extends Thread {
 
     @Override
     public void run() {
+        init();
+    }
+
+    private void init() {
         try {
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(address, port), 30000);
@@ -32,7 +38,7 @@ public class ExitNode extends Thread {
             pw = new PrintWriter(socket.getOutputStream());
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("act", "login");
-            jsonObject.put("password", RSA.RSAEncode(Settings.uuid, Settings.reseed_server_key));
+            jsonObject.put("password", ECC.ECCEncode(Settings.uuid, Settings.reseed_server_key));
             jsonObject.put("public_key", Settings.rsaKeyPair.getPublicKey());
             pw.println(jsonObject.toString());
             pw.flush();
@@ -40,13 +46,17 @@ public class ExitNode extends Thread {
             String line = "";
             try {
                 while ((line = scanner.nextLine()) != null) {
-                    JSONObject jsonObject1 = new JSONObject(line);
-                    if( jsonObject1.get("act").toString().equals("endgate_created") ) {
-                        new ExitNodeTunnel(jsonObject1.get("ip").toString(), jsonObject1.get("port").toString()).start();
+                    try {
+                        JSONObject jsonObject1 = new JSONObject(line);
+                        if (jsonObject1.get("act").toString().equals("endgate_created")) {
+                            new ExitNodeTunnel(jsonObject1.get("ip").toString(), jsonObject1.get("port").toString(), jsonObject1.get("uuid_hash").toString()).start();
+                        }
+                    } catch ( Exception e ) {
+                        e.printStackTrace();
                     }
                 }
             } catch ( Exception e ) {
-                //e.printStackTrace();
+
             }
         } catch ( Exception e ) {
             e.printStackTrace();

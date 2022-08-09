@@ -18,10 +18,14 @@ public class DataTunnel extends Thread {
     private PrintWriter pw;
     private IResponseListener listener;
     private String post_str;
-    public DataTunnel( String public_key, String ip, String port, String url, String post_str, IResponseListener listener ) {
+
+    public Socket socket;
+    private String hash;
+    public DataTunnel( String public_key, String ip, String port, String url, String post_str,String hash,  IResponseListener listener ) {
         this.ip = ip;
         this.port = port;
         this.url = url;
+        this.hash = hash;
         this.listener = listener;
         this.public_key = public_key;
         this.post_str = post_str;
@@ -35,9 +39,15 @@ public class DataTunnel extends Thread {
     @Override
     public void run() {
         try {
-            Socket socket = new Socket();
+            socket = new Socket();
             socket.connect(new InetSocketAddress(this.ip, Integer.parseInt(this.port)));
             this.pw = new PrintWriter(socket.getOutputStream());
+
+            JSONObject jsonObject5 = new JSONObject();
+            jsonObject5.put("uuid", hash);
+            pw.println(jsonObject5.toString());
+            pw.flush();
+
             String line = "";
             Scanner scanner = new Scanner(socket.getInputStream());
             try {
@@ -47,20 +57,22 @@ public class DataTunnel extends Thread {
                         if (jsonObject.get("act").toString().equals("connected")) {
                             JSONObject jsonObject1 = new JSONObject();
                             jsonObject1.put("act", "cipher");
-                            aes = RSA.generateAES();
+                            aes = ECC.generateAES();
                             jsonObject1.put("data", Base58.encode(new RC4(public_key.getBytes()).encrypt(aes.getBytes())));
                             write(jsonObject1.toString());
+                        } else if( jsonObject.get("act").toString().equals("exit") ) {
+                            socket.close();
                         } else if( jsonObject.get("act").toString().equals("url") ) {
                             JSONObject jsonObject1 = new JSONObject();
                             jsonObject1.put("act", "url");
-                            jsonObject1.put("data", RSA.AESEncode(url, aes));
+                            jsonObject1.put("data", ECC.AESEncode(url, aes));
                             if( !post_str.equals("") ) {
-                                jsonObject1.put("query", RSA.AESEncode(post_str, aes));
+                                jsonObject1.put("query", ECC.AESEncode(post_str, aes));
                             }
                             write(jsonObject1.toString());
                         } else if( jsonObject.get("act").toString().equals("result") ) {
-                            String mime = RSA.AESDecode(jsonObject.get("mime").toString(), aes);
-                            String data = RSA.AESDecode(jsonObject.get("data").toString(), aes);
+                            String mime = ECC.AESDecode(jsonObject.get("mime").toString(), aes);
+                            String data = ECC.AESDecode(jsonObject.get("data").toString(), aes);
                             listener.response(data, mime);
 
                             JSONObject jsonObject1 = new JSONObject();

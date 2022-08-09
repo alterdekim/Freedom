@@ -1,26 +1,36 @@
 package com.alterdekim.freedom.proxy;
 
+import org.bouncycastle.jcajce.provider.asymmetric.RSA;
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.interfaces.ECPrivateKey;
+import org.bouncycastle.jce.interfaces.ECPublicKey;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.jce.spec.ECParameterSpec;
+import org.bouncycastle.jce.spec.ECPrivateKeySpec;
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.*;
 import java.util.Base64;
 import java.util.UUID;
 
-public class RSA {
-    public static RSAKeyPair generateRSA() {
+public class ECC {
+    public static ECCKeyPair generateECC() {
         try {
-            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-            generator.initialize(512);
-            KeyPair pair = generator.generateKeyPair();
-            PrivateKey privateKey = pair.getPrivate();
-            PublicKey publicKey = pair.getPublic();
-            return new RSAKeyPair(Base58.encode(privateKey.getEncoded()),
-                    Base58.encode(publicKey.getEncoded()));
+            String name = "secp256r1";
+
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("ECDH", BouncyCastleProvider.PROVIDER_NAME);
+            kpg.initialize(new ECGenParameterSpec(name));
+
+            KeyPair keyPair = kpg.generateKeyPair();
+            return new ECCKeyPair(Base58.encode(keyPair.getPrivate().getEncoded()),
+                    Base58.encode(keyPair.getPublic().getEncoded()));
         } catch ( Exception e ) {
             e.printStackTrace();
         }
@@ -28,34 +38,57 @@ public class RSA {
     }
 
     public static byte[] encrypt(String data, String publicKey) throws Exception {
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(1, RSA.getPublicKey(publicKey));
-        return cipher.doFinal(data.getBytes());
+        Cipher iesCipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
+        iesCipher.init(Cipher.ENCRYPT_MODE, ECC.getPublicKey(publicKey));
+        return iesCipher.doFinal(data.getBytes());
     }
 
     public static String decrypt(byte[] data, PrivateKey privateKey) throws Exception {
-        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-        cipher.init(2, privateKey);
-        return new String(cipher.doFinal(data));
+        Cipher iesCipher = Cipher.getInstance("ECIES", BouncyCastleProvider.PROVIDER_NAME);
+        iesCipher.init(Cipher.DECRYPT_MODE, privateKey);
+        return new String(iesCipher.doFinal(data));
     }
 
     private static PublicKey getPublicKey(String base64PublicKey) {
-        PublicKey publicKey = null;
         try {
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(Base58.decode(base64PublicKey));
-            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-            publicKey = keyFactory.generatePublic(keySpec);
-            return publicKey;
-        }
-        catch (Exception e) {
+            X509EncodedKeySpec specPublic = new X509EncodedKeySpec(Base58.decode(base64PublicKey));
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+            PublicKey public_key12 = keyFactory.generatePublic(specPublic);
+            return public_key12;
+        } catch ( Exception e ) {
             e.printStackTrace();
-            return publicKey;
         }
+        return null;
+    }
+
+    private static PrivateKey getPrivateKey(String base64PrivateKey) {
+        try {
+            PKCS8EncodedKeySpec specPublic = new PKCS8EncodedKeySpec(Base58.decode(base64PrivateKey));
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+            PrivateKey public_key12 = keyFactory.generatePrivate(specPublic);
+            return public_key12;
+        } catch ( Exception e ) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public static String SHA256( String input ) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] encodedhash = digest.digest(
+                    input.getBytes(StandardCharsets.UTF_8));
+
+            return bytesToHex(encodedhash);
+        } catch ( Exception e ) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    public static String SHA512( String input ) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-512");
             byte[] encodedhash = digest.digest(
                     input.getBytes(StandardCharsets.UTF_8));
 
@@ -78,32 +111,12 @@ public class RSA {
         return hexString.toString();
     }
 
-
-    private static PrivateKey getPrivateKey(String base64PrivateKey) {
-        PrivateKey privateKey = null;
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base58.decode(base64PrivateKey));
-        KeyFactory keyFactory = null;
-        try {
-            keyFactory = KeyFactory.getInstance("RSA");
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        try {
-            privateKey = keyFactory.generatePrivate(keySpec);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-        return privateKey;
+    public static String ECCDecode(String data, String base64PrivateKey) throws Exception {
+        return ECC.decrypt(Base58.decode(data), ECC.getPrivateKey(base64PrivateKey));
     }
 
-    public static String RSADecode(String data, String base64PrivateKey) throws Exception {
-        return RSA.decrypt(Base58.decode(data), RSA.getPrivateKey(base64PrivateKey));
-    }
-
-    public static String RSAEncode(String str, String key) throws Exception {
-        return Base58.encode(RSA.encrypt(str, key));
+    public static String ECCEncode(String str, String key) throws Exception {
+        return Base58.encode(ECC.encrypt(str, key));
     }
 
     public static String generateAES() {

@@ -24,7 +24,7 @@ public class ReseedClient extends Thread {
             PrintWriter pw = new PrintWriter(socket.getOutputStream());
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("act", "login");
-            jsonObject.put("password", RSA.RSAEncode(Settings.uuid, Settings.reseed_server_key));
+            jsonObject.put("password", ECC.ECCEncode(Settings.uuid, Settings.reseed_server_key));
             jsonObject.put("public_key", Settings.rsaKeyPair.getPublicKey());
             pw.println(jsonObject.toString());
             pw.flush();
@@ -56,10 +56,11 @@ public class ReseedClient extends Thread {
             Socket socket = new Socket();
             socket.connect(new InetSocketAddress(address, port), 30000);
             socket.setSoTimeout(30000);
+            System.out.println("Connected");
             PrintWriter pw = new PrintWriter(socket.getOutputStream());
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("act", "login");
-            jsonObject.put("password", RSA.RSAEncode(Settings.uuid, Settings.reseed_server_key));
+            jsonObject.put("password", ECC.ECCEncode(Settings.uuid, Settings.reseed_server_key));
             jsonObject.put("public_key", Settings.rsaKeyPair.getPublicKey());
             pw.println(jsonObject.toString());
             pw.flush();

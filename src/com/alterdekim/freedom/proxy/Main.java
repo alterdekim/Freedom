@@ -4,14 +4,20 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.json.JSONObject;
 
+import javax.crypto.Cipher;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.Security;
+import java.security.spec.ECGenParameterSpec;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -22,6 +28,7 @@ public class Main {
     }
 
     public Main() {
+        Security.addProvider(new BouncyCastleProvider());
         File config = new File("config.json");
         if( config.exists() ) {
             try {
@@ -92,8 +99,8 @@ public class Main {
         new File(Settings.data_path).mkdirs();
         new File(Settings.reseed_local_path).mkdirs();
         if( !new File( Settings.data_path + "/crypt.json" ).exists() ) {
-            RSAKeyPair keyPair = RSA.generateRSA();
-            String uuid = RSA.generateGUID();
+            ECCKeyPair keyPair = ECC.generateECC();
+            String uuid = ECC.generateGUID();
             Settings.uuid = uuid;
             Settings.rsaKeyPair = keyPair;
             JSONObject jsonObject = new JSONObject();
@@ -103,7 +110,7 @@ public class Main {
             try {
                 new File(Settings.data_path + "/hostname.txt").createNewFile();
                 PrintWriter pw = new PrintWriter(new FileOutputStream(new File(Settings.data_path + "/hostname.txt")));
-                pw.println(RSA.SHA256(keyPair.getPublicKey())+".freedom");
+                pw.println(ECC.SHA256(keyPair.getPublicKey())+".freedom");
                 pw.flush();
                 pw.close();
             } catch ( Exception e ) {
@@ -131,7 +138,7 @@ public class Main {
                   //  e.printStackTrace();
                 }
                 JSONObject jsonObject = new JSONObject(data);
-                RSAKeyPair keyPair = new RSAKeyPair( jsonObject.get("private_key").toString(), jsonObject.get("public_key").toString() );
+                ECCKeyPair keyPair = new ECCKeyPair( jsonObject.get("private_key").toString(), jsonObject.get("public_key").toString() );
                 String uuid = jsonObject.get("uuid").toString();
                 Settings.rsaKeyPair = keyPair;
                 Settings.uuid = uuid;

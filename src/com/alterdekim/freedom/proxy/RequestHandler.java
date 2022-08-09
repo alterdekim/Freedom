@@ -37,6 +37,8 @@ public class RequestHandler implements Runnable {
      */
     BufferedWriter proxyToClientBw;
 
+    private DataTunnel dt;
+
 
     /**
      * Thread that is used to transmit data read from client to server when using HTTPS
@@ -172,7 +174,7 @@ public class RequestHandler implements Runnable {
                                 e.printStackTrace();
                             }
                         } else if( jsonObject1.get("act").toString().equals("tunnel_created") ) {
-                            new DataTunnel(public_key, jsonObject1.get("ip").toString(), jsonObject1.get("port").toString(), url + "", post_str, new IResponseListener() {
+                            dt = new DataTunnel(public_key, jsonObject1.get("ip").toString(), jsonObject1.get("port").toString(), url + "", post_str, jsonObject1.get("uuid_hash").toString(), new IResponseListener() {
                                 @Override
                                 public void response(String d, String mime) {
                                     if( d.equals("not_found") ) {
@@ -202,7 +204,8 @@ public class RequestHandler implements Runnable {
                                         }
                                     }
                                 }
-                            }).start();
+                            });
+                            dt.start();
                         }
                     }
                 }));
